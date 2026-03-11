@@ -1,44 +1,51 @@
 apiVersion: cilium.io/v1alpha1
 kind: TracingPolicy
 metadata:
-  name: kprobe-network-process
+  name: credential-dumping-detection
 spec:
   kprobes:
-    - call: sys_execve
+    # 1. Surveillance de l'exécution (Contexte GNN : Arbre de parenté)
+    - call: "sys_execve"
       args:
         - index: 0
-          type: filename  # le nom du binaire
+          type: "filename"
+          
+    # 2. Accès aux fichiers de secrets (Phase 2 : Autoencoder MSE)
+    - call: "sys_openat"
+      args:
         - index: 1
-          type: path      # les arguments
-    - call: sys_open
+          type: "path"
+      selectors:
+        - matchArgs:
+            - index: 1
+              operator: "Prefix"
+              values:
+                - "/etc/shadow"
+                - "/etc/gshadow"
+                - "/var/lib/postgresql" # Pour protéger la DB "The Core"
+
+    # 3. Lecture de la mémoire vive (Phase 1 : Télémétrie critique)
+    - call: "sys_ptrace"
       args:
         - index: 0
-          type: path
-    - call: sys_connect
-      args:
-        - index: 0
-          type: int       # sockfd
+          type: "int" # request (PTRACE_PEEKDATA, etc.)
         - index: 1
-          type: sockaddr  # adresse
-        - index: 2
-          type: int       # addrlen
-    - call: sys_accept
+          type: "int" # PID cible
+
+    - call: "sys_process_vm_readv"
       args:
         - index: 0
-          type: int
-        - index: 1
-          type: sockaddr
-        - index: 2
-          type: int
-    - call: sys_sendmsg
+          type: "int" # PID cible
+
+    # 4. Surveillance des accès aux descripteurs de mémoire
+    - call: "sys_open"
       args:
         - index: 0
-          type: int
-        - index: 1
-          type: iov_iter  # structure pour sendmsg
-    - call: sys_recvmsg
-      args:
-        - index: 0
-          type: int
-        - index: 1
-          type: iov_iter
+          type: "path"
+      selectors:
+        - matchArgs:
+            - index: 0
+              operator: "PostFix"
+              values:
+                - "/mem"  # Cible /proc/[pid]/mem
+                - "/maps" # Cible /proc/[pid]/maps

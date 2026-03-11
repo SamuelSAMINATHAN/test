@@ -4,13 +4,11 @@ metadata:
   name: credential-dumping-detection
 spec:
   kprobes:
-    # 1. Surveillance de l'exécution (Contexte GNN : Arbre de parenté)
     - call: "sys_execve"
       args:
         - index: 0
           type: "filename"
           
-    # 2. Accès aux fichiers de secrets (Phase 2 : Autoencoder MSE)
     - call: "sys_openat"
       args:
         - index: 1
@@ -18,26 +16,24 @@ spec:
       selectors:
         - matchArgs:
             - index: 1
-              operator: "Prefix"
+              operator: "Prefix" # Vérifiez si votre CRD accepte "Prefix" ou "Equal"
               values:
                 - "/etc/shadow"
                 - "/etc/gshadow"
-                - "/var/lib/postgresql" # Pour protéger la DB "The Core"
+                - "/var/lib/postgresql"
 
-    # 3. Lecture de la mémoire vive (Phase 1 : Télémétrie critique)
     - call: "sys_ptrace"
       args:
         - index: 0
-          type: "int" # request (PTRACE_PEEKDATA, etc.)
+          type: "int"
         - index: 1
-          type: "int" # PID cible
+          type: "int"
 
     - call: "sys_process_vm_readv"
       args:
         - index: 0
-          type: "int" # PID cible
+          type: "int"
 
-    # 4. Surveillance des accès aux descripteurs de mémoire
     - call: "sys_open"
       args:
         - index: 0
@@ -45,7 +41,7 @@ spec:
       selectors:
         - matchArgs:
             - index: 0
-              operator: "PostFix"
+              operator: "Suffix" # "PostFix" est remplacé par "Suffix"
               values:
-                - "/mem"  # Cible /proc/[pid]/mem
-                - "/maps" # Cible /proc/[pid]/maps
+                - "/mem"
+                - "/maps"
